@@ -7,7 +7,7 @@
   "type": "module",
   "main": "api/index.js",
   "scripts": {
-    "start": "node  api/index.js",
+    "start": "node api/index.js",
     "dev": "nodemon api/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -15,7 +15,7 @@
     "seed:clear": "node seed.js clear",
     "postinstall": "prisma generate",
     "build": "prisma generate",
-    "build:vercel": "echo 'Build done'"
+    "vercel-build": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.0.0",
