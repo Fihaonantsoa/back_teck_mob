@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Ce projet est l'API RESTful pour la gestion des notes, des bulletins, des classes et des utilisateurs d'un lycée. Elle est construite avec **Node.js**, **Express**, **Prisma** et **PostgreSQL**.",
   "license": "ISC",
-  "author": "",
+  "author": "Fihaonantsoa",
   "type": "module",
   "main": "api/index.js",
   "scripts": {
