@@ -11,8 +11,8 @@ Ce projet est l'API RESTful pour la gestion des notes, des bulletins, des classe
 
 ### 1. Cloner et installer les dépendances
 ```bash
-git clone <votre-repo>
-cd backend-gestion-notes
+git clone https://github.com/Fihaonantsoa/back_teck_mob
+cd back_teck_mob
 npm install
 
 
@@ -23,20 +23,35 @@ backend-gestion-notes/
 ├── prisma/
 │   └── schema.prisma          # (Le schéma complet de notre précédente conception)
 ├── src/
-│   ├── index.js               # Point d'entrée du serveur
-│   ├── utils/
-│   │   └── prisma.js          # Instance unique de PrismaClient
-│   ├── middlewares/
-│   │   ├── auth.middleware.js # Vérification JWT
-│   │   └── error.middleware.js # Gestion centralisée des erreurs
-│   ├── routes/
-│   │   ├── index.js           # Regroupement des routes (v1)
-│   │   ├── auth.routes.js
-│   │   └── notes.routes.js
-│   └── controllers/
-│       ├── auth.controller.js
-│       └── notes.controller.js
-├── seed.js                    # Script de peuplement initial
+|    │   index.js
+|    │
+|    ├───controllers
+|    │       auth.controller.js
+|    │       classe.controller.js
+|    │       eleve.controller.js
+|    │       enseignement.controller.js
+|    │       evaluation.controller.js
+|    │       matiere.controller.js
+|    │       note.controller.js
+|    │       utilisateur.controller.js
+|    │
+|    ├───middlewares
+|    │       auth.middleware.js
+|    │       error.middleware.js
+|    │
+|    ├───routes
+|    │       auth.routes.js
+|    │       classe.routes.js
+|    │       eleve.routes.js
+|    │       enseignement.routes.js
+|    │       evaluation.routes.js
+|    │       index.js
+|    │       matiere.routes.js
+|    │       note.routes.js
+|    │       utilisateur.routes.js
+|    │
+|    └───utils
+|        prisma.js
 └── README.md                  # Guide complet
 ```
 
