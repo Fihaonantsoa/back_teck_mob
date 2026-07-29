@@ -1,0 +1,149 @@
+// ==========================================
+// schema.prisma
+// Gestion des Notes de Lycée - Version Complète
+// ==========================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "foreignKeys" // Utilise les vraies clés étrangères en BDD
+}
+
+// ---------- ENUM ----------
+enum Role {
+  ADMIN
+  PROFESSEUR
+  ELEVE
+  PARENT
+}
+
+// ---------- MODÈLES ----------
+
+model Utilisateur {
+  id             Int              @id @default(autoincrement())
+  email          String           @unique @db.VarChar(100)
+  motDePasseHash String           @db.VarChar(255)
+  nom            String           @db.VarChar(50)
+  prenom         String           @db.VarChar(50)
+  role           Role
+
+  // Relations
+  eleve          Eleve?
+  enseignements  Enseignement[]   @relation("professeur")
+  parents        ParentEleve[]    @relation("parent")   // ← nom explicite
+
+  @@map("UTILISATEUR")
+}
+
+model Eleve {
+  id               Int       @id @default(autoincrement())
+  matricule        String    @unique @db.VarChar(20)
+  dateNaissance    DateTime? @db.Date
+  adresseParent    String?   @db.VarChar(255)
+  telephoneParent  String?   @db.VarChar(20)
+
+  // Clés étrangères
+  utilisateurId    Int       @unique // Relation 1-1 avec UTILISATEUR
+  classeId         Int
+
+  // Relations
+  utilisateur      Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  classe           Classe      @relation(fields: [classeId], references: [id], onDelete: Restrict)
+  notes            Note[]
+  parents          ParentEleve[]
+
+  @@map("ELEVE")
+}
+
+model ParentEleve {
+  parentId Int
+  eleveId  Int
+
+  // Relations
+  parent   Utilisateur @relation("parent", fields: [parentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  //       ↑ même nom que ci-dessus
+  eleve    Eleve       @relation(fields: [eleveId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([parentId, eleveId])
+  @@map("PARENT_ELEVE")
+}
+
+model Classe {
+  id            Int            @id @default(autoincrement())
+  libelle       String         @db.VarChar(50) // ex: "Terminale A"
+  niveau        String         @db.VarChar(20) // ex: "Terminale"
+  anneeScolaire String         @db.VarChar(9)  // ex: "2025-2026"
+
+  // Relations
+  eleves        Eleve[]
+  enseignements Enseignement[]
+
+  @@map("CLASSE")
+}
+
+model Matiere {
+  id                 Int            @id @default(autoincrement())
+  nom                String         @db.VarChar(100)
+  coefficientGeneral Decimal        @db.Decimal(3, 1) // ex: 2.5
+
+  // Relations
+  enseignements      Enseignement[]
+
+  @@map("MATIERE")
+}
+
+model Enseignement {
+  id            Int        @id @default(autoincrement())
+  // Clés étrangères
+  professeurId  Int
+  classeId      Int
+  matiereId     Int
+
+  // Relations
+  professeur    Utilisateur @relation("professeur", fields: [professeurId], references: [id], onDelete: Restrict)
+  classe        Classe      @relation(fields: [classeId], references: [id], onDelete: Restrict)
+  matiere       Matiere     @relation(fields: [matiereId], references: [id], onDelete: Restrict)
+  evaluations   Evaluation[]
+
+  // Un prof ne peut pas enseigner 2 fois la même matière dans la même classe
+  @@unique([professeurId, classeId, matiereId])
+  @@map("ENSEIGNEMENT")
+}
+
+model Evaluation {
+  id             Int          @id @default(autoincrement())
+  titre          String       @db.VarChar(100)
+  date           DateTime     @db.Date
+  coefficient    Decimal      @db.Decimal(3, 1) // Coefficient propre à cette évaluation
+  baremeMax      Decimal      @default(20.00) @db.Decimal(5, 2) // Note maximale (ex: 20, 10, 5)
+
+  // Clé étrangère
+  enseignementId Int
+
+  // Relations
+  enseignement   Enseignement @relation(fields: [enseignementId], references: [id], onDelete: Cascade)
+  notes          Note[]
+
+  @@map("EVALUATION")
+}
+
+model Note {
+  id            Int       @id @default(autoincrement())
+  valeur        Decimal   @db.Decimal(5, 2) // ex: 15.50
+
+  // Clés étrangères
+  evaluationId  Int
+  eleveId       Int
+
+  // Relations
+  evaluation    Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  eleve         Eleve      @relation(fields: [eleveId], references: [id], onDelete: Cascade)
+
+  // Un élève ne peut avoir qu'une seule note par évaluation
+  @@unique([evaluationId, eleveId])
+  @@map("NOTE")
+}

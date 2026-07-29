@@ -1,0 +1,131 @@
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('ADMIN', 'PROFESSEUR', 'ELEVE', 'PARENT');
+
+-- CreateTable
+CREATE TABLE "UTILISATEUR" (
+    "id" SERIAL NOT NULL,
+    "email" VARCHAR(100) NOT NULL,
+    "motDePasseHash" VARCHAR(255) NOT NULL,
+    "nom" VARCHAR(50) NOT NULL,
+    "prenom" VARCHAR(50) NOT NULL,
+    "role" "Role" NOT NULL,
+
+    CONSTRAINT "UTILISATEUR_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ELEVE" (
+    "id" SERIAL NOT NULL,
+    "matricule" VARCHAR(20) NOT NULL,
+    "dateNaissance" DATE,
+    "adresseParent" VARCHAR(255),
+    "telephoneParent" VARCHAR(20),
+    "utilisateurId" INTEGER NOT NULL,
+    "classeId" INTEGER NOT NULL,
+
+    CONSTRAINT "ELEVE_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PARENT_ELEVE" (
+    "parentId" INTEGER NOT NULL,
+    "eleveId" INTEGER NOT NULL,
+
+    CONSTRAINT "PARENT_ELEVE_pkey" PRIMARY KEY ("parentId","eleveId")
+);
+
+-- CreateTable
+CREATE TABLE "CLASSE" (
+    "id" SERIAL NOT NULL,
+    "libelle" VARCHAR(50) NOT NULL,
+    "niveau" VARCHAR(20) NOT NULL,
+    "anneeScolaire" VARCHAR(9) NOT NULL,
+
+    CONSTRAINT "CLASSE_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "MATIERE" (
+    "id" SERIAL NOT NULL,
+    "nom" VARCHAR(100) NOT NULL,
+    "coefficientGeneral" DECIMAL(3,1) NOT NULL,
+
+    CONSTRAINT "MATIERE_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ENSEIGNEMENT" (
+    "id" SERIAL NOT NULL,
+    "professeurId" INTEGER NOT NULL,
+    "classeId" INTEGER NOT NULL,
+    "matiereId" INTEGER NOT NULL,
+
+    CONSTRAINT "ENSEIGNEMENT_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EVALUATION" (
+    "id" SERIAL NOT NULL,
+    "titre" VARCHAR(100) NOT NULL,
+    "date" DATE NOT NULL,
+    "coefficient" DECIMAL(3,1) NOT NULL,
+    "baremeMax" DECIMAL(5,2) NOT NULL DEFAULT 20.00,
+    "enseignementId" INTEGER NOT NULL,
+
+    CONSTRAINT "EVALUATION_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "NOTE" (
+    "id" SERIAL NOT NULL,
+    "valeur" DECIMAL(5,2) NOT NULL,
+    "evaluationId" INTEGER NOT NULL,
+    "eleveId" INTEGER NOT NULL,
+
+    CONSTRAINT "NOTE_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UTILISATEUR_email_key" ON "UTILISATEUR"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ELEVE_matricule_key" ON "ELEVE"("matricule");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ELEVE_utilisateurId_key" ON "ELEVE"("utilisateurId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ENSEIGNEMENT_professeurId_classeId_matiereId_key" ON "ENSEIGNEMENT"("professeurId", "classeId", "matiereId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "NOTE_evaluationId_eleveId_key" ON "NOTE"("evaluationId", "eleveId");
+
+-- AddForeignKey
+ALTER TABLE "ELEVE" ADD CONSTRAINT "ELEVE_utilisateurId_fkey" FOREIGN KEY ("utilisateurId") REFERENCES "UTILISATEUR"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ELEVE" ADD CONSTRAINT "ELEVE_classeId_fkey" FOREIGN KEY ("classeId") REFERENCES "CLASSE"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PARENT_ELEVE" ADD CONSTRAINT "PARENT_ELEVE_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "UTILISATEUR"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PARENT_ELEVE" ADD CONSTRAINT "PARENT_ELEVE_eleveId_fkey" FOREIGN KEY ("eleveId") REFERENCES "ELEVE"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ENSEIGNEMENT" ADD CONSTRAINT "ENSEIGNEMENT_professeurId_fkey" FOREIGN KEY ("professeurId") REFERENCES "UTILISATEUR"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ENSEIGNEMENT" ADD CONSTRAINT "ENSEIGNEMENT_classeId_fkey" FOREIGN KEY ("classeId") REFERENCES "CLASSE"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ENSEIGNEMENT" ADD CONSTRAINT "ENSEIGNEMENT_matiereId_fkey" FOREIGN KEY ("matiereId") REFERENCES "MATIERE"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EVALUATION" ADD CONSTRAINT "EVALUATION_enseignementId_fkey" FOREIGN KEY ("enseignementId") REFERENCES "ENSEIGNEMENT"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NOTE" ADD CONSTRAINT "NOTE_evaluationId_fkey" FOREIGN KEY ("evaluationId") REFERENCES "EVALUATION"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NOTE" ADD CONSTRAINT "NOTE_eleveId_fkey" FOREIGN KEY ("eleveId") REFERENCES "ELEVE"("id") ON DELETE CASCADE ON UPDATE CASCADE;

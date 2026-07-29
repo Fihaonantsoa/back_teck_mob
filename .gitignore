@@ -1,0 +1,40 @@
+# Fichiers de dépendances
+node_modules/
+package-lock.json
+yarn.lock
+
+# Variables d'environnement (contenant des secrets)
+.env
+.env.local
+.env.*.local
+
+# Fichiers de build / logs
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Fichiers du système d'exploitation
+.DS_Store
+Thumbs.db
+
+# Fichiers de configuration d'éditeur
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Fichiers générés par Prisma
+prisma/*.db
+prisma/*.sqlite
+prisma/*.sqlite-journal
+
+# Rapports de test
+coverage/
+.nyc_output/
+
+# Fichiers temporaires
+tmp/
+temp/
