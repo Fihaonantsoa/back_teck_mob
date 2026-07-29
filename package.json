@@ -13,7 +13,8 @@
     "prisma:migrate": "prisma migrate dev",
     "seed": "node seed.js",
     "seed:clear": "node seed.js clear",
-    "build": "prisma generate && npm run build:vercel",
+    "postinstall": "prisma generate",
+    "build": "prisma generate",
     "build:vercel": "echo 'Build done'"
   },
   "dependencies": {
