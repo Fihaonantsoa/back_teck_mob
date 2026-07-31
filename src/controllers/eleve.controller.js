@@ -96,3 +96,38 @@ export const getNotesEleve = async (req, res, next) => {
     next(error);
   }
 };
+
+// Renvoie le/les profil(s) élève rattaché(s) à l'utilisateur CONNECTÉ :
+//   - si role === ELEVE  → son propre profil élève (tableau à 1 élément)
+//   - si role === PARENT → tous ses enfants rattachés via ParentEleve
+//
+// Remplace l'usage de getAllEleves() côté front pour ces deux rôles, qui ne
+// doivent plus avoir accès à la liste complète des élèves du lycée.
+
+export const getMesEleves = async (req, res, next) => {
+  try {
+    const { role, id: userId } = req.user;
+
+    if (role === 'ELEVE') {
+      const eleve = await prisma.eleve.findUnique({
+        where: { utilisateurId: userId },
+        include: { utilisateur: true, classe: true }
+      });
+      return res.status(200).json(eleve ? [eleve] : []);
+    }
+
+    if (role === 'PARENT') {
+      const liens = await prisma.parentEleve.findMany({
+        where: { parentId: userId },
+        include: {
+          eleve: { include: { utilisateur: true, classe: true } }
+        }
+      });
+      return res.status(200).json(liens.map((l) => l.eleve));
+    }
+
+    return res.status(403).json({ message: 'Réservé aux comptes élève ou parent.' });
+  } catch (error) {
+    next(error);
+  }
+};

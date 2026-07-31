@@ -1,12 +1,40 @@
 import prisma from '../utils/prisma.js';
 
-// Récupérer toutes les notes (avec filtres)
 export const getAllNotes = async (req, res, next) => {
   try {
     const { evaluationId, eleveId } = req.query;
+    const { role, id: userId } = req.user;
     const where = {};
     if (evaluationId) where.evaluationId = parseInt(evaluationId);
-    if (eleveId) where.eleveId = parseInt(eleveId);
+
+    if (eleveId) {
+      const targetEleveId = parseInt(eleveId);
+
+      // Un élève/parent ne peut filtrer que sur SES PROPRES notes.
+      if (role === 'ELEVE') {
+        const eleve = await prisma.eleve.findUnique({
+          where: { id: targetEleveId },
+          select: { utilisateurId: true }
+        });
+        if (!eleve || eleve.utilisateurId !== userId) {
+          return res.status(403).json({ message: "Vous ne pouvez consulter que vos propres notes." });
+        }
+      } else if (role === 'PARENT') {
+        const lien = await prisma.parentEleve.findUnique({
+          where: { parentId_eleveId: { parentId: userId, eleveId: targetEleveId } }
+        });
+        if (!lien) {
+          return res.status(403).json({ message: "Vous ne pouvez consulter que les notes de vos enfants." });
+        }
+      }
+      // ADMIN et PROFESSEUR : aucune restriction supplémentaire ici.
+
+      where.eleveId = targetEleveId;
+    } else if (role === 'ELEVE' || role === 'PARENT') {
+      // Un élève/parent qui appelle /notes SANS filtre eleveId ne doit
+      // jamais recevoir les notes de tout le monde.
+      return res.status(400).json({ message: 'Le paramètre eleveId est requis pour ce rôle.' });
+    }
 
     const notes = await prisma.note.findMany({
       where,
