@@ -11,7 +11,9 @@ export const getAllUtilisateurs = async (req, res, next) => {
         nom: true,
         prenom: true,
         role: true,
-        eleve: { select: { id: true, matricule: true, classeId: true } }
+        eleve: { select: { id: true, matricule: true, classeId: true } },
+        enseignements: { select: { id: true, classeId: true, matiereId: true } },
+        parents: { select: { eleveId: true } }
       },
       orderBy: { nom: 'asc' }
     });
@@ -45,10 +47,20 @@ export const getUtilisateurById = async (req, res, next) => {
   }
 };
 
-// Créer un utilisateur (admin) – peut aussi créer un élève en même temps
+// Créer un utilisateur (admin) – peut aussi créer les données liées au rôle
+// (élève, affectations professeur, liaisons parent) en même temps.
 export const createUtilisateur = async (req, res, next) => {
   try {
-    const { email, password, nom, prenom, role, eleveData } = req.body;
+    const {
+      email,
+      password,
+      nom,
+      prenom,
+      role,
+      eleveData,          // { matricule, dateNaissance?, adresseParent?, telephoneParent?, classeId }
+      enseignementsData,  // [{ classeId, matiereId }]
+      parentEleveIds,     // [eleveId, ...]
+    } = req.body;
 
     if (!email || !password || !nom || !prenom || !role) {
       return res.status(400).json({ message: 'Tous les champs sont requis.' });
@@ -57,9 +69,19 @@ export const createUtilisateur = async (req, res, next) => {
     const existing = await prisma.utilisateur.findUnique({ where: { email } });
     if (existing) return res.status(409).json({ message: 'Cet email est déjà utilisé.' });
 
+    // Validation spécifique au rôle
+    if (role === 'ELEVE' && (!eleveData || !eleveData.matricule || !eleveData.classeId)) {
+      return res.status(400).json({ message: 'Matricule et classe sont requis pour un élève.' });
+    }
+    if (role === 'PROFESSEUR' && enseignementsData && !Array.isArray(enseignementsData)) {
+      return res.status(400).json({ message: 'Format invalide pour les affectations du professeur.' });
+    }
+    if (role === 'PARENT' && parentEleveIds && !Array.isArray(parentEleveIds)) {
+      return res.status(400).json({ message: 'Format invalide pour les élèves rattachés.' });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Construction de l'objet création
     const data = {
       email,
       motDePasseHash: hashedPassword,
@@ -68,30 +90,59 @@ export const createUtilisateur = async (req, res, next) => {
       role,
     };
 
-    // Si c'est un élève, on peut aussi créer l'entrée Eleve
-    if (role === 'ELEVE' && eleveData) {
-      // On crée l'utilisateur puis l'élève dans une transaction
-      const result = await prisma.$transaction(async (tx) => {
-        const user = await tx.utilisateur.create({ data });
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.utilisateur.create({ data });
+
+      if (role === 'ELEVE' && eleveData) {
         const eleve = await tx.eleve.create({
           data: {
             matricule: eleveData.matricule,
             dateNaissance: eleveData.dateNaissance ? new Date(eleveData.dateNaissance) : null,
-            adresseParent: eleveData.adresseParent,
-            telephoneParent: eleveData.telephoneParent,
+            adresseParent: eleveData.adresseParent || null,
+            telephoneParent: eleveData.telephoneParent || null,
             utilisateurId: user.id,
             classeId: eleveData.classeId,
           }
         });
         return { user, eleve };
-      });
-      return res.status(201).json({ message: 'Élève créé avec succès.', data: result });
-    }
+      }
 
-    // Sinon, création simple
-    const newUser = await prisma.utilisateur.create({ data });
-    res.status(201).json({ message: 'Utilisateur créé avec succès.', data: newUser });
+      if (role === 'PROFESSEUR' && enseignementsData?.length) {
+        const enseignements = [];
+        for (const item of enseignementsData) {
+          if (!item.classeId || !item.matiereId) continue;
+          const ens = await tx.enseignement.create({
+            data: {
+              professeurId: user.id,
+              classeId: item.classeId,
+              matiereId: item.matiereId,
+            }
+          });
+          enseignements.push(ens);
+        }
+        return { user, enseignements };
+      }
+
+      if (role === 'PARENT' && parentEleveIds?.length) {
+        const liaisons = [];
+        for (const eleveId of parentEleveIds) {
+          const liaison = await tx.parentEleve.create({
+            data: { parentId: user.id, eleveId }
+          });
+          liaisons.push(liaison);
+        }
+        return { user, liaisons };
+      }
+
+      return { user };
+    });
+
+    return res.status(201).json({ message: 'Utilisateur créé avec succès.', data: result });
   } catch (error) {
+    // Contrainte unique violée (ex: matricule déjà utilisé, affectation en double)
+    if (error.code === 'P2002') {
+      return res.status(409).json({ message: 'Une donnée liée existe déjà (matricule ou affectation en double).' });
+    }
     next(error);
   }
 };

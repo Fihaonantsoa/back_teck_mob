@@ -1,9 +1,15 @@
 import prisma from '../utils/prisma.js';
 
 // Récupérer tous les élèves (avec leurs infos utilisateur et classe)
+// Filtre optionnel : ?classeId=3 pour ne récupérer que les élèves d'une classe
 export const getAllEleves = async (req, res, next) => {
   try {
+    const { classeId } = req.query;
+    const where = {};
+    if (classeId) where.classeId = parseInt(classeId);
+
     const eleves = await prisma.eleve.findMany({
+      where,
       include: {
         utilisateur: true,
         classe: true,
@@ -44,10 +50,8 @@ export const updateEleve = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { matricule, dateNaissance, adresseParent, telephoneParent, classeId } = req.body;
-
     const existing = await prisma.eleve.findUnique({ where: { id: parseInt(id) } });
     if (!existing) return res.status(404).json({ message: 'Élève non trouvé.' });
-
     const updated = await prisma.eleve.update({
       where: { id: parseInt(id) },
       data: {
@@ -71,7 +75,6 @@ export const deleteEleve = async (req, res, next) => {
     const { id } = req.params;
     const existing = await prisma.eleve.findUnique({ where: { id: parseInt(id) } });
     if (!existing) return res.status(404).json({ message: 'Élève non trouvé.' });
-
     await prisma.eleve.delete({ where: { id: parseInt(id) } });
     res.status(200).json({ message: 'Élève supprimé.' });
   } catch (error) {
